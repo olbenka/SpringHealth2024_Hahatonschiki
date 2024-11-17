@@ -55,7 +55,7 @@
 
    quasar dev
 
-После запуска backend и frontend инструмент будет доступен по адресу [http://localhost:8001](http://localhost:8001).
+После запуска backend и frontend инструмент будет доступен по адресу [http://localhost:9000](http://localhost:9000).
 
 ---
 
