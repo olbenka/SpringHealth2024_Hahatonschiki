@@ -1,32 +1,32 @@
 <template>
   <q-page padding>
+    <q-dialog v-model="loading">
+      <q-card>
+        <q-card-section>
+          <div class="text-h6">Загрузка файлов...</div>
+        </q-card-section>
+        <q-linear-progress indeterminate color="primary" />
+      </q-card>
+    </q-dialog>
     <div class="text-center text-h5"><q-img style="height: 100px; max-width: 110px" src="~assets/t1.png"></q-img>
       <div class="text-bold">SprintHealth</div>
       <div>Вся правда о спринтах в одном клике от Вас!</div>
     </div>
-    <div class="q-gutter-md " style="background-image:url('/src/assets/fon.png');" v-if="!showMetrics">
-      <div>
-        <div class="q-pa-md">
-          <div>
-            <div class="text-h6">Загрузка CSV файлов</div>
-          </div>
 
-          <q-uploader url="" ref="uploader" label="Перетащите файлы сюда или нажмите для выбора"
-            hint="Можно загрузить несколько файлов" multiple accept=".csv" @added="onFilesAdded" />
+    <div class="row" style="background-image:url('/src/assets/fon.png'); height:400px" v-if="!showMetrics">
 
-          <q-card-actions align="right">
-            <q-btn label="Загрузить" color="primary" @click="uploadFiles" :disable="files.length === 0 || loading" />
-          </q-card-actions>
+      <div class="q-pa-md q-mx-auto col-3">
+        <div>
+          <div class="text-h6 q-mx-xl" style="color:white">Загрузка CSV файлов</div>
         </div>
 
-        <q-dialog v-model="loading">
-          <q-card>
-            <q-card-section>
-              <div class="text-h6">Загрузка файлов...</div>
-            </q-card-section>
-            <q-linear-progress indeterminate color="primary" />
-          </q-card>
-        </q-dialog>
+        <div>
+          <q-uploader url="" ref="uploader" label="Перетащите файлы сюда или нажмите для выбора"
+            hint="Можно загрузить несколько файлов" multiple accept=".csv" @added="onFilesAdded" />
+          <q-btn class="q-my-sm" label="Загрузить" color="primary" @click="uploadFiles"
+            :disable="files.length === 0 || loading" />
+        </div>
+
       </div>
     </div>
     <metrics-display v-else />
