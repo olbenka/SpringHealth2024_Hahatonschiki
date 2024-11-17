@@ -8,18 +8,34 @@
             <q-card-section class="row">
                 <q-select class="col-10" v-model="selectedSprint" label="Выберите спринт" :options="sprintOptions"
                     emit-value map-options />
-                <q-btn @click="fetchMetrics" label="Ок" class="col">
-                </q-btn>
+                <q-btn @click="fetchMetrics" label="Ок" color="primary" class="col" />
             </q-card-section>
 
             <q-card-section v-if="metrics">
                 <div class="q-mt-md">
                     <q-linear-progress :value="progressValue" color="primary" size="lg" animated />
-                    <div class="text-subtitle1 q-mt-sm">Прогресс спринта: {{ progressValue * 100 }}%</div>
+                    <div class="text-subtitle1 q-mt-sm">
+                        Прогресс спринта: {{ (progressValue * 100).toFixed(2) }}%
+                    </div>
+                </div>
+
+                <div class="q-mt-md" style="height: 400px;">
+                    <BarChart :chart-data="chartData" />
                 </div>
 
                 <div class="q-mt-md">
-                    <bar-chart :chart-data="chartData" />
+                    <q-card>
+                        <q-card-section>
+                            <div class="text-h6">Дополнительные Метрики</div>
+                        </q-card-section>
+                        <q-card-section>
+                            <div>Процент выполнения: {{ metrics.completion_percentage }}%</div>
+                            <div>Средняя длительность выполнения задач: {{ metrics.average_task_duration }} часов</div>
+                            <div>Добавлено задач после начала спринта: {{ metrics.added_tasks_after_start }}</div>
+                            <div>Исключённые задачи: {{ metrics.excluded_tasks.count }} ({{ metrics.excluded_tasks.hours
+                                }} часов)</div>
+                        </q-card-section>
+                    </q-card>
                 </div>
             </q-card-section>
         </q-card>
@@ -32,30 +48,19 @@
                 <q-linear-progress indeterminate color="primary" />
             </q-card>
         </q-dialog>
-
-        <q-notify v-if="notification" :message="notification.message" :color="notification.color" timeout="3000" />
     </div>
 </template>
 
 <script>
 import axios from 'axios';
-import { Bar } from 'vue-chartjs';
+import { defineComponent } from 'vue';
+import BarChart from './BarChart.vue'; // Убедитесь, что путь корректен
+import { Notify } from 'quasar';
 
-export default {
+export default defineComponent({
     name: 'MetricsDisplay',
     components: {
-        BarChart: {
-            extends: Bar,
-            props: ['chartData'],
-            mounted() {
-                this.renderChart(this.chartData, { responsive: true, maintainAspectRatio: false });
-            },
-            watch: {
-                chartData(newData) {
-                    this.renderChart(newData, { responsive: true, maintainAspectRatio: false });
-                },
-            },
-        },
+        BarChart,
     },
     data() {
         return {
@@ -64,12 +69,11 @@ export default {
             metrics: null,
             chartData: null,
             loading: false,
-            notification: null,
         };
     },
     computed: {
         sprintOptions() {
-            return this.sprints.map(sprint => ({
+            return this.sprints.map((sprint) => ({
                 label: sprint.sprint_name,
                 value: sprint.sprint_id,
             }));
@@ -86,27 +90,28 @@ export default {
                 const response = await axios.get('http://localhost:8001/sprints/');
                 this.sprints = response.data;
             } catch (error) {
-                this.notification = {
-                    message: `Ошибка при получении списка спринтов: ${error.response ? error.response.data.detail : error.message}`,
-                    color: 'red',
-                };
+                Notify.create({
+                    type: 'negative',
+                    message: `Ошибка при получении списка спринтов: ${error.response ? error.response.data.detail : error.message
+                        }`,
+                });
             }
         },
         async fetchMetrics() {
             if (!this.selectedSprint) return;
 
             this.loading = true;
-            this.notification = null;
 
             try {
                 const response = await axios.get(`http://localhost:8001/sprints/${this.selectedSprint}/metrics`);
                 this.metrics = response.data;
                 this.updateChartData();
             } catch (error) {
-                this.notification = {
-                    message: `Ошибка при получении метрик: ${error.response ? error.response.data.detail : error.message}`,
-                    color: 'red',
-                };
+                Notify.create({
+                    type: 'negative',
+                    message: `Ошибка при получении метрик: ${error.response ? error.response.data.detail : error.message
+                        }`,
+                });
                 this.metrics = null;
             } finally {
                 this.loading = false;
@@ -134,7 +139,7 @@ export default {
     mounted() {
         this.fetchSprints();
     },
-};
+});
 </script>
 
 <style scoped></style>

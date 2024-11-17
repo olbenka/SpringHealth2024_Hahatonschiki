@@ -1,9 +1,9 @@
 <template>
     <div>
-        <q-card class="q-pa-md">
-            <q-card-section>
+        <div class="q-pa-md">
+            <div>
                 <div class="text-h6">Загрузка CSV файлов</div>
-            </q-card-section>
+            </div>
 
             <q-uploader url="" ref="uploader" label="Перетащите файлы сюда или нажмите для выбора"
                 hint="Можно загрузить несколько файлов" multiple accept=".csv" @added="onFilesAdded" />
@@ -12,7 +12,7 @@
                 <q-btn label="Загрузить" color="primary" @click="uploadFiles"
                     :disable="files.length === 0 || loading" />
             </q-card-actions>
-        </q-card>
+        </div>
 
         <q-dialog v-model="loading">
             <q-card>
