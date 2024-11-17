@@ -1,15 +1,13 @@
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from .models import Entity, Sprint, History
-from .schemas import Sprint as SprintSchema
-from sqlalchemy import func
 
 def calculate_metrics(db: Session, sprint_id: int):
     # Получаем данные спринта
     sprint = db.query(Sprint).filter(Sprint.sprint_id == sprint_id).first()
     if not sprint:
         return None
-    
+
     # Проверяем, является ли спринт активным
     is_active_sprint = sprint.start_date <= datetime.now() <= sprint.end_date
 
@@ -26,11 +24,9 @@ def calculate_metrics(db: Session, sprint_id: int):
             (Entity.update_date >= sprint.start_date) | (Entity.update_date == None)
         ).all()
 
-    # Создаем словарь для хранения последнего статуса каждой задачи в пределах спринта
+    # Словарь для хранения последнего статуса каждой задачи
     entity_statuses = {}
-
     for entity in entities:
-        # Получаем историю изменений статуса для задачи в пределах спринта
         status_histories = db.query(History).filter(
             History.entity_id == entity.entity_id,
             History.history_property_name == 'status',
@@ -38,13 +34,7 @@ def calculate_metrics(db: Session, sprint_id: int):
             History.history_date <= sprint.end_date
         ).order_by(History.history_date.desc()).all()
 
-        if status_histories:
-            # Берем последний статус в пределах спринта
-            last_status = status_histories[0].history_change
-        else:
-            # Если изменений статуса не было, берем статус на момент закрытия спринта или текущий статус
-            last_status = entity.status
-
+        last_status = status_histories[0].history_change if status_histories else entity.status
         entity_statuses[entity.entity_id] = {
             'entity': entity,
             'status': last_status
@@ -57,14 +47,20 @@ def calculate_metrics(db: Session, sprint_id: int):
         'done': 0.0,
         'removed': 0.0,
         'backlog_changed_percentage': 0.0,
-        'blocked_tasks': 0.0
+        'blocked_tasks': 0.0,
+        'completion_percentage': 0.0,
+        'average_task_duration': 0.0,
+        'added_tasks_after_start': 0,  # Новая метрика: добавленные задачи после начала спринта
+        'excluded_tasks': {'count': 0, 'hours': 0.0}
     }
 
-    # Словари для подсчета бэклога
+    # Подсчёт метрик
     estimation_at_start = 0.0
     estimation_after_two_days = 0.0
+    total_duration = 0
+    completed_tasks = 0
+    total_tasks = len(entity_statuses)
 
-    # Текущая дата для активного спринта или дата окончания для прошедшего
     current_date = datetime.now() if is_active_sprint else sprint.end_date
 
     for data in entity_statuses.values():
@@ -72,7 +68,6 @@ def calculate_metrics(db: Session, sprint_id: int):
         status = data['status']
         estimation = entity.estimation or 0.0
 
-        # Переводим оценку в часы
         estimation_hours = float(estimation) / 3600
 
         # Логика определения категорий задач
@@ -81,33 +76,44 @@ def calculate_metrics(db: Session, sprint_id: int):
         elif status in ['В работе']:
             metrics['in_progress'] += estimation_hours
         elif status in ['Сделано', 'Закрыто', 'Выполнено']:
-            # Проверяем резолюцию для "Снято"
             if entity.resolution in ['Отклонено', 'Отменено инициатором', 'Дубликат'] or status == 'Отклонен исполнителем':
                 metrics['removed'] += estimation_hours
             else:
                 metrics['done'] += estimation_hours
+                completed_tasks += 1
+                if entity.create_date and entity.update_date:
+                    total_duration += (entity.update_date - entity.create_date).total_seconds() / 3600  # Время выполнения в часах
         else:
             metrics['in_progress'] += estimation_hours
 
-        # Подсчет бэклога на начало спринта и после двух дней
+        # Подсчет бэклога
         if entity.create_date <= sprint.start_date + timedelta(days=2):
             estimation_at_start += estimation_hours
         elif entity.create_date > sprint.start_date + timedelta(days=2) and entity.create_date <= current_date:
             estimation_after_two_days += estimation_hours
 
+        # Подсчёт задач, добавленных после начала спринта
+        if entity.create_date > sprint.start_date + timedelta(days=2):
+            metrics['added_tasks_after_start'] += 1  # Увеличиваем счётчик
 
-        # Проверка на заблокированные задачи (опционально)
-        # Предположим, что есть метод или поле, определяющее связь "Заблокировано"
-        if hasattr(entity, 'is_blocked') and entity.is_blocked:
-            if status not in ['Сделано', 'Закрыто', 'Выполнено']:
-                metrics['blocked_tasks'] += estimation_hours
 
-    # Рассчитываем процент изменения бэклога
+        # Исключённые задачи
+        if hasattr(entity, 'is_excluded') and entity.is_excluded:
+            metrics['excluded_tasks']['count'] += 1
+            metrics['excluded_tasks']['hours'] += estimation_hours
+
+    # Процент выполнения
+    if total_tasks > 0:
+        metrics['completion_percentage'] = round((completed_tasks / total_tasks) * 100, 1)
+
+    # Средняя длительность выполнения задач
+    if completed_tasks > 0:
+        metrics['average_task_duration'] = round(total_duration / completed_tasks, 1)
+
+    # Процент изменения бэклога
     if estimation_at_start > 0:
         backlog_change_percentage = (estimation_after_two_days * 100) / estimation_at_start
         metrics['backlog_changed_percentage'] = round(backlog_change_percentage, 1)
-    else:
-        metrics['backlog_changed_percentage'] = 0.0
 
     # Округляем метрики до одного знака после запятой
     metrics['to_do'] = round(metrics['to_do'], 1)
@@ -115,5 +121,5 @@ def calculate_metrics(db: Session, sprint_id: int):
     metrics['done'] = round(metrics['done'], 1)
     metrics['removed'] = round(metrics['removed'], 1)
     metrics['blocked_tasks'] = round(metrics['blocked_tasks'], 1)
-
+    
     return metrics
