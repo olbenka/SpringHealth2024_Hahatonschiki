@@ -1,6 +1,7 @@
 # SprintHealth2024_Hahatonschiki
 
 презентация https://docs.google.com/presentation/d/1DuC5GRlioi0bCzUCeWEtJ0TzfdSXIpHEMvrRuIFYOZw/edit?usp=sharing
+
 видео https://drive.google.com/file/d/1FsEQOCKBp9H-GFefvNabKla-7ZQhJETb/view?usp=drive_link
 **SprintHealth: Инновационный Анализ для Agile-команд**  
 Проект команды "Хахатонщики" для хакатона Т1 "Импульс".
