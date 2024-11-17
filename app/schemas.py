@@ -19,6 +19,19 @@ class History(HistoryBase):
     class Config:
         from_attributes = True
 
+class TeamBase(BaseModel):
+    name: str
+
+class TeamCreate(TeamBase):
+    pass
+
+class Team(TeamBase):
+    team_id: int
+
+    class Config:
+        from_attributes = True
+
+
 class EntityBase(BaseModel):
     area: Optional[str] = None
     type: Optional[str] = None
@@ -30,6 +43,7 @@ class EntityBase(BaseModel):
     estimation: Optional[float] = None
     spent: Optional[float] = None
     resolution: Optional[str] = None
+    team_id: Optional[int]
 
 class EntityCreate(EntityBase):
     entity_id: int

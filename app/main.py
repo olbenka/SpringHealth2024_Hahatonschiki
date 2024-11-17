@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from . import models
 from .database import engine
-from .routers import entities, history, sprints, upload
+from .routers import entities, history, sprints, upload, teams
 from fastapi.middleware.cors import CORSMiddleware
 
 models.Base.metadata.create_all(bind=engine)
@@ -24,3 +24,4 @@ app.include_router(entities.router)
 app.include_router(history.router)
 app.include_router(sprints.router)
 app.include_router(upload.router)
+app.include_router(teams.router)

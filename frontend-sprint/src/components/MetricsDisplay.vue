@@ -14,17 +14,14 @@
 
                 <q-btn @click="fetchMetrics" label="Ок" color="primary" class="col-12 col-md-2" />
 
-                <!-- Настраиваемые параметры -->
                 <q-btn @click="showSettings = true" label="Настройки" color="secondary" class="col-12 col-md-2" />
             </q-card-section>
 
-            <!-- Слайдер для выбора промежутка времени -->
             <q-card-section v-if="timeRange">
                 <q-slider v-model="selectedTimeRange" :min="timeRange.min" :max="timeRange.max" :step="86400000"
                     label-always range :label-value="formatDateRange" />
             </q-card-section>
 
-            <!-- Диалог настроек -->
             <q-dialog v-model="showSettings">
                 <q-card style="min-width: 300px;">
                     <q-card-section>

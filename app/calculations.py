@@ -1,8 +1,10 @@
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from .models import Entity, Sprint, History
+from typing import Optional, List
 
-def calculate_metrics(db: Session, sprint_id: int):
+
+def calculate_metrics(db: Session, sprint_id: int, teams: Optional[List[int]] = None):
     # Получаем данные спринта
     sprint = db.query(Sprint).filter(Sprint.sprint_id == sprint_id).first()
     if not sprint:
@@ -12,19 +14,28 @@ def calculate_metrics(db: Session, sprint_id: int):
     is_active_sprint = sprint.start_date <= datetime.now() <= sprint.end_date
 
     # Получаем все задачи, связанные со спринтом
-    entities = db.query(Entity).join(History, Entity.entity_id == History.entity_id).filter(
+    entities_query = db.query(Entity).join(History, Entity.entity_id == History.entity_id).filter(
         History.history_date >= sprint.start_date,
         History.history_date <= sprint.end_date,
         History.history_property_name == 'Спринт',
-        History.history_change == sprint.sprint_name  # Используем имя спринта для фильтрации
-    ).all()
+        History.history_change == sprint.sprint_name
+    )
 
-    # Если нет задач с историей изменений в рамках спринта, используем задачи, созданные или обновлённые в спринте
+    # Фильтрация по командам
+    if teams:
+        entities_query = entities_query.filter(Entity.team_id.in_(teams))
+
+    entities = entities_query.all()
+
+    # Если нет истории изменений, используем дату создания и обновления задачи
     if not entities:
-        entities = db.query(Entity).filter(
+        entities_query = db.query(Entity).filter(
             Entity.create_date <= sprint.end_date,
             (Entity.update_date >= sprint.start_date) | (Entity.update_date == None)
-        ).all()
+        )
+        if teams:
+            entities_query = entities_query.filter(Entity.team_id.in_(teams))
+        entities = entities_query.all()
 
     # Словарь для хранения последнего статуса каждой задачи
     entity_statuses = {}
@@ -100,11 +111,11 @@ def calculate_metrics(db: Session, sprint_id: int):
 
 
         # Логика определения категорий задач с исправленными статусами
-        if status in ['created', 'to do']:
+        if status in ['Создано', 'Готов к разработке', 'В ожидании']:
             metrics['to_do'] += estimation_hours
-        elif status in ['in progress', 'analysis', 'fixing', 'testing', 'st', 'stCompleted', 'ift', 'at', 'introduction', 'development', 'readyForDevelopment', 'design']:
+        elif status in ['Разработка', 'Тестирование', ]:
             metrics['in_progress'] += estimation_hours
-        elif status in ['closed']:
+        elif status in ['Выполнено','Закрыто']:
             if entity.resolution in ['Отклонено', 'Отменено инициатором', 'Дубликат', 'Отклонен исполнителем']:
                 metrics['removed'] += estimation_hours
             else:

@@ -4,6 +4,8 @@ from typing import List
 from .. import schemas, crud
 from ..database import get_db
 from ..calculations import calculate_metrics
+from typing import List, Optional
+from fastapi import Query
 
 router = APIRouter(
     prefix="/sprints",
@@ -41,8 +43,12 @@ def delete_existing_sprint(sprint_id: int, db: Session = Depends(get_db)):
     return deleted_sprint
 
 @router.get("/{sprint_id}/metrics")
-def get_sprint_metrics(sprint_id: int, db: Session = Depends(get_db)):
-    metrics = calculate_metrics(db, sprint_id)
+def get_sprint_metrics(
+    sprint_id: int,
+    teams: Optional[List[int]] = Query(None),
+    db: Session = Depends(get_db)
+):
+    metrics = calculate_metrics(db, sprint_id, teams)
     if metrics is None:
         raise HTTPException(status_code=404, detail="Sprint not found or metrics unavailable")
     return metrics

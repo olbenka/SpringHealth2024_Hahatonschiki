@@ -10,6 +10,15 @@ sprint_entity_association = Table(
     Column('entity_id', BigInteger, ForeignKey('entities.entity_id', ondelete='CASCADE'))
 )
 
+class Team(Base):
+    __tablename__ = 'teams'
+
+    team_id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, index=True)
+
+    # Связь с задачами
+    entities = relationship('Entity', back_populates='team')
+
 class Entity(Base):
     __tablename__ = 'entities'
 
@@ -30,6 +39,10 @@ class Entity(Base):
 
     # Связь с спринтами
     sprints = relationship("Sprint", secondary=sprint_entity_association, back_populates="entities")
+    
+    # Добавляем внешний ключ team_id
+    team_id = Column(Integer, ForeignKey('teams.team_id'))
+    team = relationship('Team', back_populates='entities')
 
 class History(Base):
     __tablename__ = 'history'

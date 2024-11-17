@@ -18,6 +18,7 @@ router = APIRouter(
     tags=["upload"],
 )
 
+
 def process_entities_file(file: UploadFile, db: Session):
     # Чтение файла в DataFrame
     entities_data = pd.read_csv(
@@ -44,7 +45,7 @@ def process_entities_file(file: UploadFile, db: Session):
                 errors='coerce'
             )
 
-    # Удаление ненужных столбцов
+    # Удаление ненужных столбцов (исключая 'area')
     columns_to_drop = [
         'created_by', 'updated_by', 'assignee', 'owner',
         'rank', 'workgroup', 'name', 'due_date', 'state', 'parent_ticket_id'
@@ -54,6 +55,28 @@ def process_entities_file(file: UploadFile, db: Session):
     # Заполнение пропусков
     entities_data['priority'] = entities_data['priority'].fillna('Не указано')
     entities_data['resolution'] = entities_data['resolution'].fillna('Нет решения')
+
+    # Обработка команд
+    if 'area' in entities_data.columns:
+        # Получаем уникальные имена команд
+        team_names = entities_data['area'].dropna().unique()
+
+        # Создаём или получаем команды и создаём словарь соответствия
+        team_map = {}
+        for name in team_names:
+            team = db.query(models.Team).filter(models.Team.name == name).first()
+            if not team:
+                team = models.Team(name=name)
+                db.add(team)
+                db.commit()
+                db.refresh(team)
+            team_map[name] = team.team_id
+
+        # Добавляем столбец 'team_id' в данные задач
+        entities_data['team_id'] = entities_data['area'].map(team_map)
+    else:
+        # Если 'area' отсутствует, заполняем 'team_id' значением None
+        entities_data['team_id'] = None
 
     # Замена NaN на None в числовых полях
     entities_data['estimation'] = entities_data['estimation'].replace({np.nan: None})
@@ -78,7 +101,8 @@ def process_entities_file(file: UploadFile, db: Session):
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=400, detail=str(e))
-
+    
+    
 def process_history_file(file: UploadFile, db: Session):
     try:
         history_data = pd.read_csv(
