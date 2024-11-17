@@ -14,7 +14,6 @@
             </q-card-actions>
         </q-card>
 
-        <!-- Диалог загрузки -->
         <q-dialog v-model="loading">
             <q-card>
                 <q-card-section>
@@ -54,7 +53,6 @@ export default {
                     const formData = new FormData();
                     formData.append('file', file);
 
-                    // Определяем, к какому эндпоинту отправлять файл
                     let uploadUrl = '';
                     if (file.name.includes('entities')) {
                         uploadUrl = 'http://localhost:8001/upload/entities';

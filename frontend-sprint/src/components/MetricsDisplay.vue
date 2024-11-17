@@ -5,9 +5,11 @@
                 <div class="text-h6">Метрики спринта</div>
             </q-card-section>
 
-            <q-card-section>
-                <q-select v-model="selectedSprint" label="Выберите спринт" :options="sprintOptions" emit-value
-                    map-options @input="fetchMetrics" />
+            <q-card-section class="row">
+                <q-select class="col-10" v-model="selectedSprint" label="Выберите спринт" :options="sprintOptions"
+                    emit-value map-options />
+                <q-btn @click="fetchMetrics" label="Ок" class="col">
+                </q-btn>
             </q-card-section>
 
             <q-card-section v-if="metrics">
